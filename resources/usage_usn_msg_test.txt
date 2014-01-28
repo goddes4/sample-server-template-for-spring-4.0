@@ -1,0 +1,3 @@
+COM ANALYZER를 이용한 테스트
+
+DummyIncomming : 02010104 (size, msgId, data, checksum)
