@@ -1,47 +1,46 @@
 package net.octacomm.network;
 
-import gnu.io.SerialPort;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.oio.OioEventLoopGroup;
+import io.netty.channel.rxtx.RxtxChannel;
+import io.netty.channel.rxtx.RxtxChannelConfig.Databits;
+import io.netty.channel.rxtx.RxtxChannelConfig.Paritybit;
+import io.netty.channel.rxtx.RxtxChannelConfig.Stopbits;
+import io.netty.channel.rxtx.RxtxChannelOption;
+import io.netty.channel.rxtx.RxtxDeviceAddress;
 
-import java.util.Arrays;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import net.octacomm.sample.netty.listener.MessageSender;
 import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
+import net.octacomm.util.PrintUtil;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-
-import de.uniluebeck.itm.nettyrxtx.RXTXChannelConfig.Databits;
-import de.uniluebeck.itm.nettyrxtx.RXTXChannelConfig.Paritybit;
-import de.uniluebeck.itm.nettyrxtx.RXTXChannelConfig.Stopbits;
-import de.uniluebeck.itm.nettyrxtx.RXTXChannelFactory;
-import de.uniluebeck.itm.nettyrxtx.RXTXDeviceAddress;
 
 @Qualifier("remocon")
 public class SerialConnector implements MessageSender<OutgoingMessage> {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
     
-    private int stopbits = SerialPort.STOPBITS_1;
-    private int databits = SerialPort.DATABITS_8;
-    private int paritybit = SerialPort.PARITY_NONE;
+	private EventLoopGroup group;
+    private Stopbits stopbits = Stopbits.STOPBITS_1;
+    private Databits databits = Databits.DATABITS_8;
+    private Paritybit paritybit = Paritybit.NONE;
 
 	private String deviceAddress;
     private int baudrate;
-    private ChannelPipelineFactory pipelineFactory;
+    private ChannelInitializer<RxtxChannel> channelInitializer;
     private Channel channel;
 
     public void setDeviceAddress(String deviceAddress) {
@@ -52,34 +51,35 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
         this.baudrate = baudrate;
     }
 
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        this.pipelineFactory = pipelineFactory;
+    public void setChannelInitializer(ChannelInitializer<RxtxChannel> channelInitializer) {
+        this.channelInitializer = channelInitializer;
     }
 
     public boolean start() {
-        final ClientBootstrap bootstrap = new ClientBootstrap(
-                new RXTXChannelFactory(Executors.newCachedThreadPool()));
-
-        // Configure the event pipeline factory.
-        bootstrap.setPipelineFactory(pipelineFactory);
-        bootstrap.setOption("baudrate", baudrate);
-        bootstrap.setOption("stopbits", Stopbits.ofValue(stopbits));
-        bootstrap.setOption("databits", Databits.ofValue(databits));
-        bootstrap.setOption("paritybit", Paritybit.ofValue(paritybit));
+        final Bootstrap bootstrap = new Bootstrap();
+        group = new OioEventLoopGroup();
+        
+        bootstrap.group(group)
+        	.channel(RxtxChannel.class)
+        	.option(RxtxChannelOption.BAUD_RATE, baudrate)
+        	.option(RxtxChannelOption.STOP_BITS, stopbits)
+        	.option(RxtxChannelOption.DATA_BITS, databits)
+        	.option(RxtxChannelOption.PARITY_BIT, paritybit)
+        	.handler(channelInitializer);
 
         // Make a new connection.
-        ChannelFuture future = bootstrap.connect(new RXTXDeviceAddress(deviceAddress));
+        ChannelFuture future = bootstrap.connect(new RxtxDeviceAddress(deviceAddress));
         future.awaitUninterruptibly();
         if (!future.isSuccess()) {
-        	logger.error("Remocon channel is disconnected", future.getCause());
+        	logger.error("Remocon channel is disconnected", future.cause());
         	return false;
         } else {
         	logger.info("Remocon channel is connected");
         }
         
-        channel = future.getChannel();
+        channel = future.channel();
         
-        future.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+        future.channel().closeFuture().addListener(new ChannelFutureListener() {
 
             @Override
             public void operationComplete(ChannelFuture cf) throws Exception {
@@ -91,7 +91,7 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
                     public void run() {
                     	channel = null;
                     	logger.info("Channel is closed.");
-                        bootstrap.releaseExternalResources();
+                    	group.shutdownGracefully();
                     }
                 }).start();
             }
@@ -100,7 +100,7 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
     }
     
     public boolean stop() {
-    	if (channel != null && channel.isConnected()) {
+    	if (channel != null && channel.isActive()) {
     		channel.close();
     		return true;
     	} else {
@@ -111,7 +111,7 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
 	@Override
 	public boolean isConnected() {
 		if (channel != null) {
-			return channel.isConnected();
+			return channel.isActive();
 		} else {
 			return false;
 		}
@@ -119,7 +119,7 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
 
 	@Override
 	public boolean sendSyncMessage(OutgoingMessage packet) {
-		channel.write(packet, new RXTXDeviceAddress(deviceAddress));
+		channel.writeAndFlush(packet);
 		return true;
 	}
 
@@ -140,23 +140,20 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
     	SerialConnector connector = new SerialConnector();
         connector.setDeviceAddress("COM3");
         connector.setBaudrate(19200);
-        connector.setPipelineFactory(new ChannelPipelineFactory() {
+        connector.setChannelInitializer(new ChannelInitializer<RxtxChannel>() {
+			
+			@Override
+			protected void initChannel(RxtxChannel ch) throws Exception {
+				ChannelPipeline pipeline = ch.pipeline();
+                pipeline.addLast("loggingHandler", new SimpleChannelInboundHandler<ByteBuf>() {
 
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
-                pipeline.addLast("loggingHandler", new SimpleChannelHandler() {
-
-                    @Override
-                    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e)
-                            throws Exception {
-                        log.debug("{}", Arrays.toString(((ChannelBuffer) e.getMessage()).array()));
-                        super.messageReceived(ctx, e);
-                    }
-                });
-                return pipeline;
-            }
-        });
+					@Override
+					protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+						log.debug("{}", PrintUtil.printReceivedChannelBuffer("recv", msg));
+					}
+				});
+			}
+		});
         connector.start();
     }
 

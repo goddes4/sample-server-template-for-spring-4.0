@@ -1,9 +1,11 @@
 package net.octacomm.network;
 
+import io.netty.channel.Channel;
+
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.jboss.netty.channel.Channel;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ public class DefaultChannelGroup implements ChannelGroup {
     
     @Override
     public void addChannel(Channel channel) {
-        String key = makeMapKey(channel.getRemoteAddress());
+        String key = makeMapKey(channel.remoteAddress());
         addChannel(key, channel);
     }
 
@@ -33,7 +35,7 @@ public class DefaultChannelGroup implements ChannelGroup {
 
     @Override
     public void removeChannel(Channel channel) {
-        String key = makeMapKey(channel.getRemoteAddress());
+        String key = makeMapKey(channel.remoteAddress());
         removeChannel(key);
     }
     
@@ -75,16 +77,17 @@ public class DefaultChannelGroup implements ChannelGroup {
     public void write(String ip, Object msg) {
         Channel channel = allChannels.get(ip);
         if (allChannels.get(ip) != null) {
-            logger.debug("{} Send Message : {}", channel.getRemoteAddress(), msg);
+            logger.debug("{} Send Message : {}", channel.remoteAddress(), msg);
             channel.write(msg);
         }
+        channel.flush();
     }
 
     @Override
     public void writeToAll(Object msg) {
         for (Channel channel : allChannels.values()) {
-            logger.debug("{} Send Message : {}", channel.getRemoteAddress(), msg);
-            channel.write(msg);
+            logger.debug("{} Send Message : {}", channel.remoteAddress(), msg);
+            channel.writeAndFlush(msg);
         }
     }
 

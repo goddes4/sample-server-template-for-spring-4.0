@@ -1,6 +1,6 @@
 package net.octacomm.network;
 
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 
 /**
  * Netty를 통해서 접속된 채널의 리스트를 관리하고,

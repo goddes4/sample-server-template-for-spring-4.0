@@ -1,6 +1,9 @@
 package net.octacomm.sample.netty.usn.handler;
 
-import java.util.ArrayList;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
+
 import java.util.List;
 
 import net.octacomm.sample.netty.usn.exception.InvalidChecksumException;
@@ -8,36 +11,30 @@ import net.octacomm.sample.netty.usn.msg.common.IncomingMessage;
 import net.octacomm.sample.netty.usn.msg.common.MessageHeader;
 import net.octacomm.util.PrintUtil;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractUsnServerDecoder extends FrameDecoder{
+public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private MessageHeader header;
 	
+	
 	@Override
-	protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) {
-		Object ret = decode(buffer);
+	protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+		decode(buffer, out);
 		logger.debug(PrintUtil.printReceivedChannelBuffer("After decoding", buffer));		
-		return ret;
 	}
 
-	private List<IncomingMessage> decode(ChannelBuffer buffer) {
-		List<IncomingMessage> packetList = new ArrayList<IncomingMessage>();
-
+	private void decode(ByteBuf buffer, List<Object> out) {
 		logger.debug(PrintUtil.printReceivedChannelBuffer("in", buffer));
 
-		while (buffer.readable()) {
+		while (buffer.isReadable()) {
 			// 이전 수신 처리에서 Header 까지 완료 되었는지 확인
 			if (header == null) {
 				// Header를 처리하기 위한 데이터가 있는지 확인
 				if (buffer.readableBytes() < MessageHeader.getRequiredHeaderSize()) {
-					return completePacket(packetList);
+					return;
 				}
 				
 				try {
@@ -51,11 +48,11 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 			
 			// Body 를 처리하기 위한 데이터가 있는지 확인
 			if (buffer.readableBytes() < header.getRequiredBodySize()) {
-				return completePacket(packetList);
+				return;
 			}
 	
 			try {
-				packetList.add(makeMessageBody(buffer));
+				out.add(makeMessageBody(buffer));
 			} catch (InvalidChecksumException | ReflectiveOperationException e) {
 				logger.error("", e);
 			} catch (RuntimeException e) {
@@ -65,7 +62,6 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 			// 패킷이 완성이 되면 리스트에 저장하고, 반드시 Header는 null로 초기화 해야 한다.
 			header = null;
 		}
-		return completePacket(packetList);
 	}
 
 	/**
@@ -75,7 +71,7 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 	 * 
 	 * @param buffer
 	 */
-	public abstract MessageHeader makeMessageHeader(ChannelBuffer buffer);
+	public abstract MessageHeader makeMessageHeader(ByteBuf buffer);
 
 	/**
 	 * 버퍼를 이용해 IncomingMessage 생성한다.
@@ -84,7 +80,7 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 	 *  
 	 * @param buffer
 	 */
-	private IncomingMessage makeMessageBody(ChannelBuffer buffer) throws InvalidChecksumException, ReflectiveOperationException {
+	private IncomingMessage makeMessageBody(ByteBuf buffer) throws InvalidChecksumException, ReflectiveOperationException {
 		IncomingMessage incomingMessage;
 		
 		try {
@@ -106,7 +102,7 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 	 * 
 	 * @param buffer
 	 */
-	public abstract void discardBufferByFailHeader(ChannelBuffer buffer);
+	public abstract void discardBufferByFailHeader(ByteBuf buffer);
 	
 	/**
 	 * Body 처리시 예외가 발생 했을 경우 buffer 처리
@@ -117,7 +113,7 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 	 * @param buffer
 	 * @param header
 	 */
-	public abstract void discardBufferByFailBody(ChannelBuffer buffer, MessageHeader header);
+	public abstract void discardBufferByFailBody(ByteBuf buffer, MessageHeader header);
 
 	/**
 	 * USN 메시지가 checksum 이 존재 할경우 해당 패킷을 처리한다.
@@ -126,18 +122,6 @@ public abstract class AbstractUsnServerDecoder extends FrameDecoder{
 	 * @param incomingMessage
 	 * @return
 	 */
-	public abstract boolean processChecksum(ChannelBuffer buffer, IncomingMessage incomingMessage);
+	public abstract boolean processChecksum(ByteBuf buffer, IncomingMessage incomingMessage);
 	
-	/**
-	 * 완성된 패킷이 한개 이상 있을경우 상위 Decoder에 처리를 넘긴다.
-	 * 
-	 * @param packetList
-	 * @return
-	 */
-	private List<IncomingMessage> completePacket(List<IncomingMessage> packetList) {
-		if (packetList.size() > 0) {
-			return packetList;
-		}
-		return null;
-	}
 }

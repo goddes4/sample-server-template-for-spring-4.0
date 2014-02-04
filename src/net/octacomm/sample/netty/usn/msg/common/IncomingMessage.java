@@ -1,10 +1,10 @@
 package net.octacomm.sample.netty.usn.msg.common;
 
-import org.jboss.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 public interface IncomingMessage {
 	
-	void decode(ChannelBuffer buffer);
+	void decode(ByteBuf buffer);
 
 	int checksum();
 

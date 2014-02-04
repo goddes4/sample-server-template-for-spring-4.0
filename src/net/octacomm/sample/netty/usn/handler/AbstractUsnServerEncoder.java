@@ -1,31 +1,24 @@
 package net.octacomm.sample.netty.usn.handler;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
 import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
 import net.octacomm.util.PrintUtil;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractUsnServerEncoder extends OneToOneEncoder {
+public abstract class AbstractUsnServerEncoder extends MessageToByteEncoder<OutgoingMessage> {
 	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	
 	@Override
-	protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) {
-		if (msg instanceof OutgoingMessage){
-			OutgoingMessage message = (OutgoingMessage)msg;
-			logger.debug("[Outgoing] {} => {}", channel, message);
-			ChannelBuffer writeBuffer = encode(message);
-			
-			logger.debug(PrintUtil.printReceivedChannelBuffer("out", writeBuffer));
-			return writeBuffer;
-		} else {
-			throw new UnsupportedOperationException("Supported Message is only OutgoingMessage.");
-		}
+	protected void encode(ChannelHandlerContext ctx, OutgoingMessage msg, ByteBuf out) throws Exception {
+		logger.debug("[Outgoing] {} => {}", ctx.channel(), msg);
+		encode(msg, out);
+		
+		logger.debug(PrintUtil.printReceivedChannelBuffer("out", out));
 	}
 
 	/**
@@ -33,8 +26,9 @@ public abstract class AbstractUsnServerEncoder extends OneToOneEncoder {
 	 * 2. 생성한 buffer에 데이터를 담고, 반환한다.
 	 * 
 	 * @param message
+	 * @param out 
 	 * @return
 	 */
-	public abstract ChannelBuffer encode(OutgoingMessage message);
+	public abstract void encode(OutgoingMessage message, ByteBuf out);
 
 }

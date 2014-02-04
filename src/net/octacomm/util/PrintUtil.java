@@ -1,14 +1,14 @@
 package net.octacomm.util;
 
-import org.jboss.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 public class PrintUtil {
-	public static String printReceivedChannelBuffer(String msg, ChannelBuffer buffer) {
-		ChannelBuffer copyBuffer = buffer.copy();
+	public static String printReceivedChannelBuffer(String msg, ByteBuf buffer) {
+		ByteBuf copyBuffer = buffer.copy();
 		StringBuilder str = new StringBuilder();
 
 		str.append(msg + " : ");
-		while (copyBuffer.readable()) {
+		while (copyBuffer.isReadable()) {
 			str.append(String.format("%02X ", copyBuffer.readUnsignedByte()));
 		}
 

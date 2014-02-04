@@ -1,25 +1,23 @@
 package net.octacomm.network;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
+
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 import net.octacomm.util.DelayUtil;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.serialization.ClassResolvers;
-import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
-import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,17 +27,16 @@ import org.springframework.core.task.TaskExecutor;
  *
  * @author Taeyoung, Kim
  */
-public class NioTcpClient extends SimpleChannelHandler {
+public class NioTcpClient {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private String localIP;
     private int localPort;
     private String serverIP;
     private int serverPort;
-    private ChannelPipelineFactory pipelineFactory;
+    private ChannelInitializer<SocketChannel> channelInitializer;
 
-    private final ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(
-    		Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+    private final Bootstrap bootstrap = new Bootstrap();
     
 	private final Runnable retryConnect = new Runnable() {
 		@Override
@@ -69,16 +66,17 @@ public class NioTcpClient extends SimpleChannelHandler {
         this.serverPort = serverPort;
     }
 
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        this.pipelineFactory = pipelineFactory;
+    public void setChannelInitializer(ChannelInitializer<SocketChannel> channelInitializer) {
+        this.channelInitializer = channelInitializer;
     }
     
     public void init() {
-        bootstrap.setPipelineFactory(pipelineFactory);
-
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
-
+    	bootstrap.group(new NioEventLoopGroup())
+    		.channel(NioSocketChannel.class)
+    		.option(ChannelOption.TCP_NODELAY, true)
+    		.option(ChannelOption.SO_KEEPALIVE, true)
+    		.handler(channelInitializer);
+    	
         connect();
     }
 
@@ -102,7 +100,7 @@ public class NioTcpClient extends SimpleChannelHandler {
 				if (future.isSuccess()) {
 					logger.info("Success!!!");
 
-					future.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+					future.channel().closeFuture().addListener(new ChannelFutureListener() {
 			            @Override
 			            public void operationComplete(ChannelFuture cf) throws Exception {
 			            	logger.info("Channel Close!!!");
@@ -122,30 +120,33 @@ public class NioTcpClient extends SimpleChannelHandler {
         NioTcpClient tcpClient = new NioTcpClient();
         tcpClient.setServerIP("127.0.0.1");
         tcpClient.setServerPort(9001);
-        tcpClient.setPipelineFactory(new ChannelPipelineFactory() {
+        tcpClient.setChannelInitializer(new ChannelInitializer<SocketChannel>() {
+			
+			@Override
+			protected void initChannel(SocketChannel ch) throws Exception {
+				ch.pipeline().addLast(
+						new ObjectEncoder(),
+						new ObjectDecoder(ClassResolvers.softCachingResolver(null)),
+						new SimpleChannelInboundHandler<String>() {
 
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(new ObjectEncoder(), new ObjectDecoder(ClassResolvers.softCachingResolver(null)), new SimpleChannelHandler() {
+							@Override
+							public void channelActive(ChannelHandlerContext ctx) throws Exception {
+								ctx.channel().writeAndFlush("xxx");
+							}
 
-                    @Override
-                    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-                        ctx.getChannel().write("xxx");
-                    }
+							@Override
+							public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+								cause.printStackTrace();
+								ctx.close();
+							}
 
-                    @Override
-                    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-                        System.out.println(e.getMessage().toString());
-                    }
-
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-                        e.getCause().printStackTrace();
-                        e.getChannel().close();
-                    }
-                });
-            }
-        });
+							@Override
+							protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+								System.out.println(msg);
+							}
+						});
+			}
+		});
         tcpClient.init();
     }
 }

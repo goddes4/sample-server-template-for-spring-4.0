@@ -7,9 +7,9 @@ import net.octacomm.network.ChannelGroup;
 import net.octacomm.network.DefaultChannelGroup;
 import net.octacomm.network.NioTcpServer;
 import net.octacomm.sample.netty.server.handler.GuiServerHandler;
-import net.octacomm.sample.netty.server.handler.GuiServerPipelineFactory;
+import net.octacomm.sample.netty.server.handler.GuiServerChannelInitializer;
 import net.octacomm.sample.netty.usn.handler.UsnServerHandler;
-import net.octacomm.sample.netty.usn.handler.UsnServerPipelineFactory;
+import net.octacomm.sample.netty.usn.handler.UsnServerChannelInitializer;
 import net.octacomm.sample.service.LoginServiceImpl;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,8 +88,8 @@ public class ServerConfig {
 		}
 
 		@Bean
-		public GuiServerPipelineFactory guiServerPipelineFactory() {
-			return new GuiServerPipelineFactory();
+		public GuiServerChannelInitializer guiServerPipelineFactory() {
+			return new GuiServerChannelInitializer();
 		}
 		
 		@Bean(destroyMethod = "close")
@@ -97,7 +97,7 @@ public class ServerConfig {
 			NioTcpServer tcpServer = new NioTcpServer();
 			tcpServer.setLocalIP(env.getProperty("tcp.local.ip"));
 			tcpServer.setLocalPort(env.getProperty("tcp.local.gui.port", int.class));
-			tcpServer.setPipelineFactory(guiServerPipelineFactory());
+			tcpServer.setChannelInitializer(guiServerPipelineFactory());
 			tcpServer.init();
 			return tcpServer;
 		}
@@ -115,8 +115,8 @@ public class ServerConfig {
 		}
 
 		@Bean
-		public UsnServerPipelineFactory usnServerPipelineFactory() {
-			return new UsnServerPipelineFactory();
+		public UsnServerChannelInitializer usnServerChannelInitializer() {
+			return new UsnServerChannelInitializer();
 		}
 		
 		@Bean(destroyMethod = "close")
@@ -124,7 +124,7 @@ public class ServerConfig {
 			NioTcpServer tcpServer = new NioTcpServer();
 			tcpServer.setLocalIP(env.getProperty("tcp.local.ip"));
 			tcpServer.setLocalPort(env.getProperty("tcp.local.usn.port", int.class));
-			tcpServer.setPipelineFactory(usnServerPipelineFactory());
+			tcpServer.setChannelInitializer(usnServerChannelInitializer());
 			tcpServer.init();
 			return tcpServer;
 		}

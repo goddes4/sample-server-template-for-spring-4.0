@@ -1,5 +1,9 @@
 package net.octacomm.sample.netty.server.handler;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
@@ -26,12 +30,6 @@ import net.octacomm.sample.netty.msg.login.LoginResult;
 import net.octacomm.sample.service.CRUDService;
 import net.octacomm.sample.service.LoginService;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author tykim
  *
  */
-public class GuiServerHandler extends SimpleChannelHandler implements MessageSender<RequestMessage> {
+public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage> implements MessageSender<RequestMessage> {
 
 	private static final int SYNC_MESSAGE_TIMEOUT_SEC = 1000;
 	
@@ -74,34 +72,9 @@ public class GuiServerHandler extends SimpleChannelHandler implements MessageSen
 	private String userId;
 	
 	@Override
-	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-		channel = e.getChannel();
-		for (MessageSenderAware<RequestMessage> messageSenderRegistry : messageSenderRegistries) {
-			messageSenderRegistry.setMessageSender(this);
-		}
-	}
+	protected void channelRead0(ChannelHandlerContext ctx, RequestMessage request) throws Exception {
 
-	@Override
-	public void channelDisconnected(ChannelHandlerContext ctx,
-			ChannelStateEvent e) {
-		logger.info("Disconnect Channel : {}", channel.getRemoteAddress());
-		
-		if (userId != null) {
-			channelGroup.removeChannel(userId);
-			loginService.logout(userId);
-		}
-	}
-
-	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-		logger.warn("", e.getCause());
-	}
-
-	@Override
-	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-
-		RequestMessage request = (RequestMessage) e.getMessage();
-
-		logger.debug("{} Recv Message : {}", channel, e.getMessage());
+		logger.debug("{} Recv Message : {}", channel, request);
 
 		ResponseMessage response;
 		try {
@@ -111,10 +84,34 @@ public class GuiServerHandler extends SimpleChannelHandler implements MessageSen
 		}
 		sendResponseMessage(response);
 	}
-	
+
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		channel = ctx.channel();
+		logger.info("channelActive : {}", channel);
+		for (MessageSenderAware<RequestMessage> messageSenderRegistry : messageSenderRegistries) {
+			messageSenderRegistry.setMessageSender(this);
+		}
+	}
+
+	@Override
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		logger.info("channelInactive : {}", channel.remoteAddress());
+		
+		if (userId != null) {
+			channelGroup.removeChannel(userId);
+			loginService.logout(userId);
+		}
+	}
+
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+		logger.warn("", cause);
+	}
+
 	private void sendResponseMessage(ResponseMessage res) {
-		channel.write(res);
-		logger.debug("{} Send Message : {}", channel.getRemoteAddress(), res);
+		channel.writeAndFlush(res);
+		logger.debug("{} Send Message : {}", channel.remoteAddress(), res);
 	}
 
 	public ResponseMessage process(RequestMessage request) {
@@ -150,12 +147,12 @@ public class GuiServerHandler extends SimpleChannelHandler implements MessageSen
 
 	@Override
 	public boolean sendSyncMessage(RequestMessage packet) {
-		if (channel == null || !channel.isConnected()) return false;
+		if (channel == null || !channel.isActive()) return false;
     	
 		logger.info("send : {}", packet);
 		
     	recvLock.clear();
-		channel.write(packet);
+		channel.writeAndFlush(packet);
 
 		BooleanResponseMessage response;
 		try {
@@ -179,6 +176,6 @@ public class GuiServerHandler extends SimpleChannelHandler implements MessageSen
 
 	@Override
 	public boolean isConnected() {
-		return channel.isConnected();
+		return channel.isActive();
 	}
 }

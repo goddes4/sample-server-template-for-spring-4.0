@@ -1,18 +1,19 @@
 package net.octacomm.network;
 
-import java.net.InetSocketAddress;
-import java.nio.ByteOrder;
-import java.util.concurrent.Executors;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ChildChannelStateEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import java.net.InetSocketAddress;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,40 +21,37 @@ import org.slf4j.LoggerFactory;
  *
  * @author Taeyoung,Kim
  */
-public class NioTcpServer extends SimpleChannelUpstreamHandler {
+public class NioTcpServer extends ChannelInboundHandlerAdapter {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final int DEFAULT_SERVER_PORT = 10000;
+
+	private final Logger logger = LoggerFactory.getLogger(getClass());
     
     // Spring DI
     private String localIP;
-    private int localPort;
-    private ByteOrder byteOrder;
-    private ChannelPipelineFactory pipelineFactory;
+    private int localPort = DEFAULT_SERVER_PORT;
+    private ChannelInitializer<SocketChannel> channelInitializer;
     private ChannelGroup channelGroup;
     
-    private	Channel channel;
-    private	ServerBootstrap bootstrap;
+    private	ChannelFuture channelFuture;
+    private EventLoopGroup bossGroup = new NioEventLoopGroup();
+    private EventLoopGroup workerGroup = new NioEventLoopGroup();
 
     @Override
-    public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        logger.info(e.getChannel() + " NioTcpServer is bound and started to accept incoming connections .");
-    }
-
-    @Override
-    public void childChannelOpen(ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception {
-        logger.info(e.getChildChannel() + " Client is connected.");
-        if (channelGroup != null) {
-            channelGroup.addChannel(e.getChildChannel());
-        }
-    }
-
-    @Override
-    public void childChannelClosed(ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception {
-        logger.info(e.getChildChannel() + " Client is disconnected.");
-        if (channelGroup != null) {
-            channelGroup.removeChannel(e.getChildChannel());
-        }
-    }
+	public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+    	logger.info(ctx.channel() + " NioTcpServer is bound and started to accept incoming connections .");
+    	ctx.fireChannelRegistered();
+	}
+	
+	@Override
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		Channel ch = ctx.channel();
+		logger.info(ch + " Client is disconnected.");
+		if (channelGroup != null) {
+			channelGroup.removeChannel(ch);
+		}
+		ctx.fireChannelInactive();
+	}
 
     public void setLocalIP(String serverIP) {
         this.localIP = serverIP;
@@ -63,69 +61,49 @@ public class NioTcpServer extends SimpleChannelUpstreamHandler {
         this.localPort = serverPort;
     }
 
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        this.pipelineFactory = pipelineFactory;
+    public void setChannelInitializer(ChannelInitializer<SocketChannel> channelInitializer) {
+        this.channelInitializer = channelInitializer;
     }
 
     public void setChannelGroup(ChannelGroup channelGroup) {
         this.channelGroup = channelGroup;
     }
-    
-    public void setByteOrder(String byteOrder) {
-    	if (byteOrder.equals("LITTLE")) {
-    		this.byteOrder = ByteOrder.LITTLE_ENDIAN;
-    	} else if (byteOrder.equals("BIG")) {
-    		this.byteOrder = ByteOrder.BIG_ENDIAN; 
-    	}
-    }
 
     public void init() {
         // Configure the server.
-        bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                Executors.newCachedThreadPool(),
-                Executors.newCachedThreadPool()));
-
-        // Configure the pipeline factory.
-        bootstrap.setParentHandler(this);
-        bootstrap.setPipelineFactory(pipelineFactory);
-
+        ServerBootstrap bootstrap = new ServerBootstrap();
+        bootstrap.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+        		.channel(NioServerSocketChannel.class)
+        		.childHandler(channelInitializer)
+        		.childOption(ChannelOption.TCP_NODELAY, true)
+        		.childOption(ChannelOption.SO_KEEPALIVE, true)
+        		.handler(this);
+        
         logger.debug("---------- Netty Option ----------");
-        bootstrap.setOption("child.tcpNoDelay", true);
         logger.debug(" tcpNoDelay is true");
-        bootstrap.setOption("child.keepAlive", true);
         logger.debug(" keepAlive is true");
 
-        /*
-        bootstrap.setOption("bufferFactory", 
-        		HeapChannelBufferFactory.getInstance(ChannelBuffers.LITTLE_ENDIAN));
-        		*/
-        logger.debug(" Native byte order is {}", ByteOrder.nativeOrder());
-        if (byteOrder != null) {
-        	logger.debug(" Byte order is changed into {}", byteOrder);
-        	bootstrap.setOption("child.bufferFactory", new HeapChannelBufferFactory(byteOrder));
-        }
-
         // Bind and start to accept incoming connections.
-        if (localPort == 0) {
-            // Set the options
-            bootstrap.setOption("localAddress", new InetSocketAddress(10000));
-            channel = bootstrap.bind();
-        } else if (localIP == null || localIP.isEmpty()) {
-        	channel = bootstrap.bind(new InetSocketAddress(localPort));
+        if (localIP == null || localIP.isEmpty()) {
+        	channelFuture = bootstrap.bind(new InetSocketAddress(localPort));
         } else {
-        	channel = bootstrap.bind(new InetSocketAddress(localIP, localPort));
+        	channelFuture = bootstrap.bind(new InetSocketAddress(localIP, localPort));
         }
     }
     
     public void close() {
-    	if (bootstrap != null) {
+    	if (channelFuture != null) {
     		if (channelGroup != null) {
     			channelGroup.removeAllChannels();
     		}
-    		channel.close();
+    		try {
+				channelFuture.channel().close().sync();
+			} catch (InterruptedException e) {
+				logger.info("", e.toString());
+			}
     		logger.info("releaseExternalResources");
-    		bootstrap.releaseExternalResources();
+    		bossGroup.shutdownGracefully();
+    		workerGroup.shutdownGracefully();
     	}
     }
 }

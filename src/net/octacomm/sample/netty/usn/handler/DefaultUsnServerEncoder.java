@@ -1,27 +1,21 @@
 package net.octacomm.sample.netty.usn.handler;
 
+import io.netty.buffer.ByteBuf;
+
 import java.nio.ByteOrder;
 
-import net.octacomm.sample.netty.usn.msg.common.MessageHeader;
 import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 
 public class DefaultUsnServerEncoder extends AbstractUsnServerEncoder {
 
 	@Override
-	public ChannelBuffer encode(OutgoingMessage message) {
+	public void encode(OutgoingMessage message, ByteBuf out) {
+		out.order(ByteOrder.BIG_ENDIAN);
 		
-		int bufferLength = MessageHeader.getRequiredHeaderSize() + message.getMessageType().getSize();
-		ChannelBuffer writeBuffer = ChannelBuffers.directBuffer(ByteOrder.BIG_ENDIAN, bufferLength);
-		
-		writeBuffer.writeByte(message.getMessageType().getId());
-		writeBuffer.writeByte(message.getHeader().getSeq());
-		writeBuffer.writeByte(message.getMessageType().getSize());
-		message.encode(writeBuffer);
-
-		return writeBuffer;
+		out.writeByte(message.getMessageType().getId());
+		out.writeByte(message.getHeader().getSeq());
+		out.writeByte(message.getMessageType().getSize());
+		message.encode(out);
 	}
 
 }

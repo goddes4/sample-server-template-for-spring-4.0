@@ -1,7 +1,9 @@
 package net.octacomm.sample.netty.usn.handler;
 
-import java.util.Iterator;
-import java.util.List;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
@@ -14,12 +16,6 @@ import net.octacomm.sample.netty.usn.exception.NotSupprtedMessageIdException;
 import net.octacomm.sample.netty.usn.msg.common.IncomingMessage;
 import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +34,7 @@ import org.springframework.scheduling.annotation.AsyncResult;
  *
  */
 @Qualifier("usn")
-public class UsnServerHandler extends SimpleChannelHandler implements MessageSender<OutgoingMessage> {
+public class UsnServerHandler extends SimpleChannelInboundHandler<IncomingMessage> implements MessageSender<OutgoingMessage> {
 
 	private static final int SYNC_MESSAGE_TIMEOUT_SEC = 2000;
 	private static final int RETRY_COUNT = 3;
@@ -52,46 +48,48 @@ public class UsnServerHandler extends SimpleChannelHandler implements MessageSen
 	private UsnMessageListener<IncomingMessage> listener;
 	
 	private String getChannelName() {
-		return channel.getRemoteAddress().toString();
+		return channel.remoteAddress().toString();
 	}
 
+
 	@Override
-	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-		channel = e.getChannel();
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		channel = ctx.channel();
 		logger.debug("{} is connected", getChannelName());
 		listener.connectionStateChanged(true);
 	}
 
 	@Override
-	public void channelDisconnected(ChannelHandlerContext ctx,
-			ChannelStateEvent e) {
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		logger.debug("{} was disconnected", getChannelName());
 		listener.connectionStateChanged(false);
 	}
 
 	@Override
-	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-		Object message = e.getMessage();
+	protected void channelRead0(ChannelHandlerContext ctx, IncomingMessage packet)
+			throws Exception {
+		
+		logger.info("[Incomming] {} {}", getChannelName(), packet);
 
-		if (message instanceof List) {
-			@SuppressWarnings("unchecked")
-			Iterator<IncomingMessage> it = ((List<IncomingMessage>) message).iterator();
-
-			while (it.hasNext()) {
-				IncomingMessage packet = it.next();
-
-				logger.info("[Incomming] {} {}", getChannelName(), packet);
-
-				if (isAckMessage(packet)) {
-					recvLock.offer(packet);
-				} else {
-					listener.messageReceived(packet);
-				}
-			
-				it.remove();
-			}
+		if (isAckMessage(packet)) {
+			recvLock.offer(packet);
+		} else {
+			listener.messageReceived(packet);
 		}
 	}
+
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+			throws Exception {
+		
+		logger.error("{}", getChannelName(), cause);
+		
+		if (cause instanceof NotSupprtedMessageIdException
+				|| cause instanceof InvalidDataSizeException) {
+			ctx.channel().close();
+		}
+	}
+
 
 	/**
 	 * IncommingPacket 이면서 suffix가 Ack 인 클래스의 경우
@@ -106,16 +104,6 @@ public class UsnServerHandler extends SimpleChannelHandler implements MessageSen
 		return packet.getClass().getSimpleName().endsWith("Ack");
 	}
 
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-		logger.error("{}", getChannelName(), e.getCause());
-		
-		if (e.getCause() instanceof NotSupprtedMessageIdException
-				|| e.getCause() instanceof InvalidDataSizeException) {
-			e.getChannel().close();
-		}
-	}
-
     /**
      * 응답이 요구 되는 메시지의 경우 BlockingQueue를 사용하여, 
      * 응답메시지가 오기를 기다린후 응답시간 10000 msec 이 초과했을때 실패로 간주한다.
@@ -124,7 +112,7 @@ public class UsnServerHandler extends SimpleChannelHandler implements MessageSen
      */
     @Override
     public boolean sendSyncMessage(OutgoingMessage packet) {
-    	if (channel == null || !channel.isConnected()) return false;
+    	if (channel == null || !channel.isActive()) return false;
     	
     	int retryCount = 0;
 
@@ -140,7 +128,7 @@ public class UsnServerHandler extends SimpleChannelHandler implements MessageSen
 
 	private boolean send(OutgoingMessage packet) {
 		recvLock.clear();
-		channel.write(packet);
+		channel.writeAndFlush(packet);
 
 		IncomingMessage recvMessage;
 		try {
@@ -170,7 +158,7 @@ public class UsnServerHandler extends SimpleChannelHandler implements MessageSen
     	
     	logger.info("{}", packet);
     	try {
-    		channel.write(packet);
+    		channel.writeAndFlush(packet);
     	} catch (RuntimeException e) {
     		logger.error("{}", e);
 			return new AsyncResult<Boolean>(false);
@@ -181,7 +169,7 @@ public class UsnServerHandler extends SimpleChannelHandler implements MessageSen
 	@Override
 	public boolean isConnected() {
 		if (channel != null) {
-			return channel.isConnected();
+			return channel.isActive();
 		} else {
 			return false;
 		}
