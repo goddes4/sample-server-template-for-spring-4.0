@@ -1,7 +1,6 @@
 package net.octacomm.network;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -43,16 +42,6 @@ public class NioTcpServer extends ChannelInboundHandlerAdapter {
     	ctx.fireChannelRegistered();
 	}
 	
-	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		Channel ch = ctx.channel();
-		logger.info(ch + " Client is disconnected.");
-		if (channelGroup != null) {
-			channelGroup.removeChannel(ch);
-		}
-		ctx.fireChannelInactive();
-	}
-
     public void setLocalIP(String serverIP) {
         this.localIP = serverIP;
     }
