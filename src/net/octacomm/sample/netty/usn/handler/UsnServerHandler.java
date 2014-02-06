@@ -3,6 +3,7 @@ package net.octacomm.sample.netty.usn.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelHandler.Sharable;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
@@ -34,6 +35,7 @@ import org.springframework.scheduling.annotation.AsyncResult;
  *
  */
 @Qualifier("usn")
+@Sharable
 public class UsnServerHandler extends SimpleChannelInboundHandler<IncomingMessage> implements MessageSender<OutgoingMessage> {
 
 	private static final int SYNC_MESSAGE_TIMEOUT_SEC = 2000;

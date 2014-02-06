@@ -78,9 +78,8 @@ public class DefaultChannelGroup implements ChannelGroup {
         Channel channel = allChannels.get(ip);
         if (allChannels.get(ip) != null) {
             logger.debug("{} Send Message : {}", channel.remoteAddress(), msg);
-            channel.write(msg);
+            channel.writeAndFlush(msg);
         }
-        channel.flush();
     }
 
     @Override

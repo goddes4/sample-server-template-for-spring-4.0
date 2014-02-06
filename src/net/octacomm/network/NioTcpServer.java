@@ -72,7 +72,7 @@ public class NioTcpServer extends ChannelInboundHandlerAdapter {
     public void init() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+        bootstrap.group(bossGroup, workerGroup)
         		.channel(NioServerSocketChannel.class)
         		.childHandler(channelInitializer)
         		.childOption(ChannelOption.TCP_NODELAY, true)

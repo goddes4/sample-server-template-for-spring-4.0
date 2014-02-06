@@ -14,7 +14,7 @@
 	    -30.    => left align
 	       .-30 => 30 보다 클 경우 뒤에서 자른다. -->
 	<property name="SIMPLE_PATTERN"
-		value="%d{HH:mm:ss.SSS} %-5level - %msg%n" />
+		value="%d{HH:mm:ss.SSS} %-5level [%t] - %msg%n" />
 		
 	<property name="DEFAULT_PATTERN_FOR_FILE"
 		value="%d{yyyy-MM-dd HH:mm:ss} %-5level [%t] %logger %method:%L %n\t\t  %msg%n" />
@@ -70,7 +70,7 @@
     
     <!-- 공통 로그 -->
     <root>
-        <level value="INFO"/>
+        <level value="DEBUG"/>
         <appender-ref ref="STDOUT"/>
         <appender-ref ref="FILE"/>
     </root>
