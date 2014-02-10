@@ -3,10 +3,10 @@ package net.octacomm.sample.netty.usn.msg;
 import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import lombok.ToString;
-import net.octacomm.sample.netty.usn.msg.common.AbstractMessage;
-import net.octacomm.sample.netty.usn.msg.common.MessageHeader;
+import net.octacomm.sample.netty.usn.msg.common.AbstractUsnMessage;
+import net.octacomm.sample.netty.usn.msg.common.UsnMessageHeader;
+import net.octacomm.sample.netty.usn.msg.common.UsnOutgoingMessage;
 import net.octacomm.sample.netty.usn.msg.common.MessageType;
-import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
 
 /**
  * request가 true이면 TimeSync 요청 메시지 이고
@@ -17,12 +17,12 @@ import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
  */
 @Getter
 @ToString(callSuper = true)
-public class DummyOutgoing extends AbstractMessage implements OutgoingMessage {
+public class DummyOutgoing extends AbstractUsnMessage implements UsnOutgoingMessage {
 
 	private int dummyData;
 
 	public DummyOutgoing(int dummyData) {
-		super(new MessageHeader(MessageType.DUMMY_OUTGOING));		
+		super(new UsnMessageHeader(MessageType.DUMMY_OUTGOING));		
 		this.dummyData = dummyData;
 	}
 

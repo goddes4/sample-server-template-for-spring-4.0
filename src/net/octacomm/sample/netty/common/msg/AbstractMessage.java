@@ -1,4 +1,4 @@
-package net.octacomm.sample.netty.usn.msg.common;
+package net.octacomm.sample.netty.common.msg;
 
 import lombok.Getter;
 
@@ -15,17 +15,19 @@ import lombok.Getter;
  * 
  * @author taeyo
  *
+ * @param <H> MessageHeader
+ * @param <T> MessageType
  */
-public abstract class AbstractMessage {
+public abstract class AbstractMessage<H extends MessageHeader<T>, T extends IMessageType> {
 
 	@Getter
-	private MessageHeader header;
+	private H header;
 
-	public AbstractMessage(MessageHeader header) {
+	public AbstractMessage(H header) {
 		this.header = header;
 	}
 	
-	public MessageType getMessageType() {
+	public T getMessageType() {
 		return header.getMessageType();
 	}
 	

@@ -1,8 +1,10 @@
 package net.octacomm.sample.netty.usn.msg.common;
 
+import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import net.octacomm.sample.netty.common.msg.MessageHeader;
 
 /**
  * 1. 해더에 포함되는 필드를 선언한다.
@@ -14,7 +16,7 @@ import lombok.ToString;
  */
 @Getter
 @ToString
-public class MessageHeader {
+public class UsnMessageHeader implements MessageHeader<MessageType> {
 	public static final int MESSAGE_HEADER_LENGTH = 3;
 	
 	@Setter	private int seq;
@@ -22,23 +24,17 @@ public class MessageHeader {
 	
 	private MessageType messageType;
 	
-	public MessageHeader(MessageType messageType) {
+	public UsnMessageHeader(MessageType messageType) {
 		this.messageType = messageType;
 	}
 	
 	/**
-	 * Header를 생성하기 위해 필요한 사이즈
-	 * @return
-	 */
-	public static int getRequiredHeaderSize() {
-		return MESSAGE_HEADER_LENGTH;
-	}
-	
-	/**
 	 * Body를 생성하기 위해 필요한 사이즈
+	 * for decoding
 	 * 
 	 * @return
 	 */
+	@Override
 	public int getRequiredBodySize() {
 		return size;
 	}
@@ -48,8 +44,14 @@ public class MessageHeader {
 	 * 
 	 * @return
 	 */
+	@Override
 	public int checksum() {
 		return messageType.getId() + size;
+	}
+
+	@Override
+	public void encode(ByteBuf buffer) {
+		
 	}
 
 }

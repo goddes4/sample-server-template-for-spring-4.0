@@ -1,4 +1,4 @@
-package net.octacomm.sample.netty.usn.exception;
+package net.octacomm.sample.netty.exception;
 
 public class NotSupprtedMessageIdException extends RuntimeException {
 	

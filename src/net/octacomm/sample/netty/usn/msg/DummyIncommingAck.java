@@ -3,10 +3,10 @@ package net.octacomm.sample.netty.usn.msg;
 import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import lombok.ToString;
-import net.octacomm.sample.netty.usn.msg.common.AbstractMessage;
-import net.octacomm.sample.netty.usn.msg.common.MessageHeader;
+import net.octacomm.sample.netty.usn.msg.common.AbstractUsnMessage;
+import net.octacomm.sample.netty.usn.msg.common.UsnMessageHeader;
+import net.octacomm.sample.netty.usn.msg.common.UsnOutgoingMessage;
 import net.octacomm.sample.netty.usn.msg.common.MessageType;
-import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
 
 /**
  * 
@@ -15,10 +15,10 @@ import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
  */
 @Getter
 @ToString(callSuper = true)
-public class DummyIncommingAck extends AbstractMessage implements OutgoingMessage {
+public class DummyIncommingAck extends AbstractUsnMessage implements UsnOutgoingMessage {
 
 	public DummyIncommingAck() {
-		super(new MessageHeader(MessageType.DUMMY_INCOMMING_ACK));		
+		super(new UsnMessageHeader(MessageType.DUMMY_INCOMMING_ACK));		
 	}
 
 	@Override

@@ -3,12 +3,12 @@ package net.octacomm.sample.service;
 import net.octacomm.logger.Log;
 import net.octacomm.sample.netty.listener.MessageSender;
 import net.octacomm.sample.netty.listener.MessageSenderAware;
-import net.octacomm.sample.netty.listener.UsnMessageListener;
+import net.octacomm.sample.netty.listener.MessageListener;
 import net.octacomm.sample.netty.msg.NotifyMessageUpdateRequestMessage;
 import net.octacomm.sample.netty.msg.RequestMessage;
-import net.octacomm.sample.netty.usn.msg.common.IncomingMessage;
-import net.octacomm.sample.netty.usn.msg.common.MessageHelper;
-import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
+import net.octacomm.sample.netty.usn.msg.common.UsnIncomingMessage;
+import net.octacomm.sample.netty.usn.msg.common.UsnMessageHelper;
+import net.octacomm.sample.netty.usn.msg.common.UsnOutgoingMessage;
 
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,27 +17,28 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
+@Qualifier("usn")
 public class UsnMessageProcessor implements
-		UsnMessageListener<IncomingMessage>, MessageSenderAware<RequestMessage> {
+		MessageListener<UsnIncomingMessage>, MessageSenderAware<RequestMessage> {
 
 	@Log private Logger logger;
 	
 	@Autowired
 	@Qualifier("usn")
-	private MessageSender<OutgoingMessage> usnMessageSender;
+	private MessageSender<UsnOutgoingMessage> usnMessageSender;
 	private MessageSender<RequestMessage> guiMessageSensor;
 
 	@Scheduled(fixedDelay = 10000)
 	public void messageTest() {
-		usnMessageSender.sendSyncMessage(MessageHelper.makeDummyOutgoing(33));
+		usnMessageSender.sendSyncMessage(UsnMessageHelper.makeDummyOutgoing(33));
 	}
 	
 	@Override
-	public void messageReceived(IncomingMessage packet) {
+	public void messageReceived(UsnIncomingMessage packet) {
 		switch (packet.getMessageType()) {
 
 			case DUMMY_INCOMMING:
-				usnMessageSender.sendAsyncMessage(MessageHelper.makeDummyIncommingAck());
+				usnMessageSender.sendAsyncMessage(UsnMessageHelper.makeDummyIncommingAck());
 					break;
 			
 			default:

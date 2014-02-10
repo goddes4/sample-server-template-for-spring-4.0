@@ -20,8 +20,8 @@ import io.netty.channel.rxtx.RxtxDeviceAddress;
 
 import java.util.concurrent.Future;
 
+import net.octacomm.sample.netty.common.msg.OutgoingMessage;
 import net.octacomm.sample.netty.listener.MessageSender;
-import net.octacomm.sample.netty.usn.msg.common.OutgoingMessage;
 import net.octacomm.util.PrintUtil;
 
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 @Qualifier("remocon")
-public class SerialConnector implements MessageSender<OutgoingMessage> {
+public class SerialConnector implements MessageSender<OutgoingMessage<?>> {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
     
@@ -118,13 +118,13 @@ public class SerialConnector implements MessageSender<OutgoingMessage> {
 	}
 
 	@Override
-	public boolean sendSyncMessage(OutgoingMessage packet) {
+	public boolean sendSyncMessage(OutgoingMessage<?> packet) {
 		channel.writeAndFlush(packet);
 		return true;
 	}
 
 	@Override
-	public Future<Boolean> sendAsyncMessage(OutgoingMessage packet) {
+	public Future<Boolean> sendAsyncMessage(OutgoingMessage<?> packet) {
 		throw new UnsupportedOperationException();
 	}
 

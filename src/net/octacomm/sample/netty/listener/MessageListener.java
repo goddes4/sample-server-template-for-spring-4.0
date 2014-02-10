@@ -1,6 +1,6 @@
 package net.octacomm.sample.netty.listener;
 
-public interface UsnMessageListener<T> {
+public interface MessageListener<T> {
 
 	void connectionStateChanged(boolean isConnected);
 

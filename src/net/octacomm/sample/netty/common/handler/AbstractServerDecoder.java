@@ -1,4 +1,4 @@
-package net.octacomm.sample.netty.usn.handler;
+package net.octacomm.sample.netty.common.handler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -6,19 +6,19 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-import net.octacomm.sample.netty.usn.exception.InvalidChecksumException;
-import net.octacomm.sample.netty.usn.msg.common.IncomingMessage;
-import net.octacomm.sample.netty.usn.msg.common.MessageHeader;
+import net.octacomm.sample.netty.common.msg.IncomingMessage;
+import net.octacomm.sample.netty.common.msg.IMessageType;
+import net.octacomm.sample.netty.common.msg.MessageHeader;
+import net.octacomm.sample.netty.exception.InvalidChecksumException;
 import net.octacomm.util.PrintUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
+public abstract class AbstractServerDecoder extends ByteToMessageDecoder {
 	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
-	private MessageHeader header;
-	
+	private MessageHeader<? extends IMessageType> header;
 	
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
@@ -33,7 +33,7 @@ public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 			// 이전 수신 처리에서 Header 까지 완료 되었는지 확인
 			if (header == null) {
 				// Header를 처리하기 위한 데이터가 있는지 확인
-				if (buffer.readableBytes() < MessageHeader.getRequiredHeaderSize()) {
+				if (buffer.readableBytes() < requireHeaderSize()) {
 					return;
 				}
 				
@@ -64,6 +64,8 @@ public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 		}
 	}
 
+	public abstract int requireHeaderSize();
+
 	/**
 	 * 메시지 해더를 생성하고, 데이터를 입력한다.
 	 * ex1) 현재 수신한 모든 버퍼를 삭제한다.
@@ -71,8 +73,8 @@ public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 	 * 
 	 * @param buffer
 	 */
-	public abstract MessageHeader makeMessageHeader(ByteBuf buffer);
-
+	public abstract MessageHeader<? extends IMessageType> makeMessageHeader(ByteBuf buffer);
+ 
 	/**
 	 * 버퍼를 이용해 IncomingMessage 생성한다.
 	 * 예외가 발생할 경우 size만큼 데이터를 읽어서 버린다.
@@ -80,11 +82,11 @@ public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 	 *  
 	 * @param buffer
 	 */
-	private IncomingMessage makeMessageBody(ByteBuf buffer) throws InvalidChecksumException, ReflectiveOperationException {
-		IncomingMessage incomingMessage;
+	private IncomingMessage<?> makeMessageBody(ByteBuf buffer) throws InvalidChecksumException, ReflectiveOperationException {
+		IncomingMessage<?> incomingMessage;
 		
 		try {
-			incomingMessage = header.getMessageType().newInstance(header);
+			incomingMessage = header.getMessageType().getIncomingClass().getConstructor(header.getClass()).newInstance(header);
 		} catch (ReflectiveOperationException e) {
 			discardBufferByFailBody(buffer, header);
 			throw e;
@@ -113,7 +115,7 @@ public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 	 * @param buffer
 	 * @param header
 	 */
-	public abstract void discardBufferByFailBody(ByteBuf buffer, MessageHeader header);
+	public abstract void discardBufferByFailBody(ByteBuf buffer, MessageHeader<?> header);
 
 	/**
 	 * USN 메시지가 checksum 이 존재 할경우 해당 패킷을 처리한다.
@@ -122,6 +124,6 @@ public abstract class AbstractUsnServerDecoder extends ByteToMessageDecoder {
 	 * @param incomingMessage
 	 * @return
 	 */
-	public abstract boolean processChecksum(ByteBuf buffer, IncomingMessage incomingMessage);
+	public abstract boolean processChecksum(ByteBuf buffer, IncomingMessage<?> incomingMessage);
 	
 }

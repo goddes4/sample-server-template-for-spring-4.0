@@ -4,18 +4,18 @@ import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import net.octacomm.sample.netty.usn.msg.common.AbstractMessage;
-import net.octacomm.sample.netty.usn.msg.common.IncomingMessage;
-import net.octacomm.sample.netty.usn.msg.common.MessageHeader;
+import net.octacomm.sample.netty.usn.msg.common.AbstractUsnMessage;
+import net.octacomm.sample.netty.usn.msg.common.UsnIncomingMessage;
+import net.octacomm.sample.netty.usn.msg.common.UsnMessageHeader;
 
 @Setter
 @Getter
 @ToString(callSuper = true)
-public class DummyIncomming extends AbstractMessage implements IncomingMessage {
+public class DummyIncomming extends AbstractUsnMessage implements UsnIncomingMessage {
 
 	private int dummyData;
 	
-	public DummyIncomming(MessageHeader header) {
+	public DummyIncomming(UsnMessageHeader header) {
 		super(header);
 	}
 
