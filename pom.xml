@@ -44,7 +44,7 @@
 		<hsql.version>2.2.9</hsql.version>
 		
 		<!-- Java Network Framework -->
-		<io.netty.version>4.0.15.Final</io.netty.version>
+		<io.netty.version>4.0.17.Final</io.netty.version>
 		
 		<!-- Scheduler -->
 		<quartz-schduler.version>2.1.7</quartz-schduler.version>
