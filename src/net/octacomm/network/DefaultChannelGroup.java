@@ -1,6 +1,7 @@
 package net.octacomm.network;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,7 +79,7 @@ public class DefaultChannelGroup implements ChannelGroup {
         Channel channel = allChannels.get(ip);
         if (allChannels.get(ip) != null) {
             logger.debug("{} Send Message : {}", channel.remoteAddress(), msg);
-            channel.writeAndFlush(msg);
+            channel.writeAndFlush(msg).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
         }
     }
 
@@ -86,7 +87,7 @@ public class DefaultChannelGroup implements ChannelGroup {
     public void writeToAll(Object msg) {
         for (Channel channel : allChannels.values()) {
             logger.debug("{} Send Message : {}", channel.remoteAddress(), msg);
-            channel.writeAndFlush(msg);
+            channel.writeAndFlush(msg).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
         }
     }
 

@@ -1,6 +1,7 @@
 package net.octacomm.sample.netty.server.handler;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -110,7 +111,7 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
 	}
 
 	private void sendResponseMessage(ResponseMessage res) {
-		channel.writeAndFlush(res);
+		channel.writeAndFlush(res).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
 		logger.debug("{} Send Message : {}", channel.remoteAddress(), res);
 	}
 
@@ -152,7 +153,7 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
 		logger.info("send : {}", packet);
 		
     	recvLock.clear();
-		channel.writeAndFlush(packet);
+		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
 
 		BooleanResponseMessage response;
 		try {

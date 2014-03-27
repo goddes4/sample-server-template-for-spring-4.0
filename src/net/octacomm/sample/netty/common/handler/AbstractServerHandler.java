@@ -2,6 +2,7 @@ package net.octacomm.sample.netty.common.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -127,7 +128,7 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 
 	private boolean send(O packet) {
 		recvLock.clear();
-		channel.writeAndFlush(packet);
+		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
 
 		I recvMessage;
 		try {
@@ -157,7 +158,7 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
     	
     	logger.info("{}", packet);
     	try {
-    		channel.writeAndFlush(packet);
+    		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
     	} catch (RuntimeException e) {
     		logger.error("{}", e);
 			return new AsyncResult<Boolean>(false);

@@ -119,7 +119,7 @@ public class SerialConnector implements MessageSender<OutgoingMessage<?>> {
 
 	@Override
 	public boolean sendSyncMessage(OutgoingMessage<?> packet) {
-		channel.writeAndFlush(packet);
+		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
 		return true;
 	}
 
