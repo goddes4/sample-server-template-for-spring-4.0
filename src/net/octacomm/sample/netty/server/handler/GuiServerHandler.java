@@ -28,8 +28,8 @@ import net.octacomm.sample.netty.msg.domain.DomainCRUDRequestMessage;
 import net.octacomm.sample.netty.msg.login.LoginRequestMessage;
 import net.octacomm.sample.netty.msg.login.LoginResponseMessage;
 import net.octacomm.sample.netty.msg.login.LoginResult;
-import net.octacomm.sample.service.CRUDService;
 import net.octacomm.sample.service.LoginService;
+import net.octacomm.sample.service.crud.CRUDService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

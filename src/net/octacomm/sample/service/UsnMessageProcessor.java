@@ -1,14 +1,15 @@
 package net.octacomm.sample.service;
 
 import net.octacomm.logger.Log;
+import net.octacomm.sample.netty.listener.MessageListener;
 import net.octacomm.sample.netty.listener.MessageSender;
 import net.octacomm.sample.netty.listener.MessageSenderAware;
-import net.octacomm.sample.netty.listener.MessageListener;
-import net.octacomm.sample.netty.msg.NotifyMessageUpdateRequestMessage;
+import net.octacomm.sample.netty.msg.NotifyMessageRequestMessage;
 import net.octacomm.sample.netty.msg.RequestMessage;
 import net.octacomm.sample.netty.usn.msg.common.UsnIncomingMessage;
 import net.octacomm.sample.netty.usn.msg.common.UsnMessageHelper;
 import net.octacomm.sample.netty.usn.msg.common.UsnOutgoingMessage;
+import net.octacomm.sample.service.listener.Message;
 
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,7 +54,7 @@ public class UsnMessageProcessor implements
 	
 	private void sendNotifyRouterStatusMsg(boolean isConnected) {
 		if (guiMessageSensor != null) {
-			guiMessageSensor.sendSyncMessage(new NotifyMessageUpdateRequestMessage(""));
+			guiMessageSensor.sendSyncMessage(new NotifyMessageRequestMessage(Message.DUMMY_MSG));
 		}
 	}
 	
