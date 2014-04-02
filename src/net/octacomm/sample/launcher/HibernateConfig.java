@@ -53,7 +53,7 @@ public class HibernateConfig {
 		props.put("hibernate.dialect", "org.hibernate.dialect.HSQLDialect");
 		props.put("hibernate.show_sql", "true");
 
-		return null;
+		return props;
 	}
 	
 	@Bean
