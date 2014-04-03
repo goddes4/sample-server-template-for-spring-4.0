@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 
 @Service
 @Qualifier("usn")
@@ -29,9 +30,24 @@ public class UsnMessageProcessor implements
 	private MessageSender<UsnOutgoingMessage> usnMessageSender;
 	private MessageSender<RequestMessage> guiMessageSensor;
 
-	@Scheduled(fixedDelay = 10000)
+	@Scheduled(fixedDelay = 10000, initialDelay = 5000)
 	public void messageTest() {
-		usnMessageSender.sendSyncMessage(UsnMessageHelper.makeDummyOutgoing(33));
+		logger.error("method start");
+		boolean result = usnMessageSender.sendSyncMessage(UsnMessageHelper.makeDummyOutgoing(33));
+		logger.error("sync result : {}", result);
+		usnMessageSender.sendAsyncMessage(UsnMessageHelper.makeDummyOutgoing(33)).addCallback(new ListenableFutureCallback<Boolean>() {
+
+			@Override
+			public void onSuccess(Boolean result) {
+				logger.error("Async {}", result);
+			}
+
+			@Override
+			public void onFailure(Throwable t) {
+				logger.error("Async {}", t);
+			}
+		});;
+		logger.error("method end");
 	}
 	
 	@Override

@@ -7,7 +7,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +33,7 @@ import net.octacomm.sample.service.crud.CRUDService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.concurrent.ListenableFuture;
 
 /**
  * Spring에 빈으로 등록되며, Scope는 Prototype이다.
@@ -171,7 +171,7 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
 	}
 
 	@Override
-	public Future<Boolean> sendAsyncMessage(RequestMessage packet) {
+	public ListenableFuture<Boolean> sendAsyncMessage(RequestMessage packet) {
 		throw new UnsupportedOperationException();
 	}
 

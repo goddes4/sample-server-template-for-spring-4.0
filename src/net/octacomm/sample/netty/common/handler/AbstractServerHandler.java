@@ -1,13 +1,13 @@
 package net.octacomm.sample.netty.common.handler;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
+import java.util.concurrent.Callable;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -20,8 +20,10 @@ import net.octacomm.sample.netty.listener.MessageSender;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncResult;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureTask;
 
 /**
  * USN 과 연결되는 Channel을 통해서 데이터의 read, write 를 처리한다.
@@ -41,6 +43,9 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
+	@Autowired
+	private TaskExecutor executor;
+	
 	private BlockingQueue<I> recvLock = new SynchronousQueue<I>();
 	private Channel channel;
 
@@ -118,6 +123,7 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 
     	// 3회 재전송
     	while(retryCount < RETRY_COUNT) {
+    		logger.debug("retry count : {}, msg : {}", retryCount, packet);
     		if (send(packet)) {
     			return true;
     		}
@@ -151,19 +157,18 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
      * Ack 메시지 사용
      * 
      */
-    @Async("executor")
 	@Override
-	public Future<Boolean> sendAsyncMessage(O packet) {
-    	if (channel == null) return new AsyncResult<Boolean>(false);
-    	
-    	logger.info("{}", packet);
-    	try {
-    		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
-    	} catch (RuntimeException e) {
-    		logger.error("{}", e);
-			return new AsyncResult<Boolean>(false);
-		}
-    	return new AsyncResult<Boolean>(true);
+	public ListenableFuture<Boolean> sendAsyncMessage(final O packet) {
+		ListenableFutureTask<Boolean> futureTask = new ListenableFutureTask<>(new Callable<Boolean>() {
+
+			@Override
+			public Boolean call() throws Exception {
+		    	return sendSyncMessage(packet);
+			}
+		});
+
+		executor.execute(futureTask);
+    	return futureTask;  	
 	}
 
 	@Override

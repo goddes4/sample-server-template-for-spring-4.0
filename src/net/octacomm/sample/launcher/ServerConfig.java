@@ -54,7 +54,7 @@ public class ServerConfig {
 	@Bean(destroyMethod = "shutdown")
 	public TaskScheduler scheduler() {
 		ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-		scheduler.setPoolSize(1);
+		scheduler.setPoolSize(10);
 
 		return scheduler;
 	}
@@ -62,9 +62,9 @@ public class ServerConfig {
 	@Bean(destroyMethod = "shutdown")
 	public TaskExecutor executor() {
 		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-		executor.setCorePoolSize(1);
-		executor.setMaxPoolSize(1);
-		executor.setQueueCapacity(10);
+		executor.setCorePoolSize(20);
+		executor.setMaxPoolSize(30);
+		executor.setQueueCapacity(100);
 		executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
 		
 		return executor;

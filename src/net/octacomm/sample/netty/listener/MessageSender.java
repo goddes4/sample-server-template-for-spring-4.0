@@ -1,6 +1,6 @@
 package net.octacomm.sample.netty.listener;
 
-import java.util.concurrent.Future;
+import org.springframework.util.concurrent.ListenableFuture;
 
 public interface MessageSender<T> {
 	
@@ -8,6 +8,6 @@ public interface MessageSender<T> {
 	
 	boolean sendSyncMessage(T packet);
 	
-	Future<Boolean> sendAsyncMessage(T packet);
+	ListenableFuture<Boolean> sendAsyncMessage(T packet);
 	
 }
