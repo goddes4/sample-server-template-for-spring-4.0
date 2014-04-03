@@ -95,19 +95,7 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 		}
 	}
 
-
-	/**
-	 * IncommingPacket 이면서 suffix가 Ack 인 클래스의 경우
-	 * sendSyncMessage() 에서 보낸 메시지의 Ack로 인식할 수 있도록 함
-	 * 
-	 * 예) EnemyHitResult -> EnemyHitResultAck
-	 * 
-	 * @param packet
-	 * @return
-	 */
-	private boolean isAckMessage(I packet) {
-		return packet.getClass().getSimpleName().endsWith("Ack");
-	}
+	protected abstract boolean isAckMessage(I packet);
 
     /**
      * 응답이 요구 되는 메시지의 경우 BlockingQueue를 사용하여, 
@@ -141,7 +129,7 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 			recvMessage = recvLock.poll(SYNC_MESSAGE_TIMEOUT_SEC, TimeUnit.MILLISECONDS);
 
 			if (recvMessage != null) {
-				if ((packet.getMessageType().getId() + 0x80) == recvMessage.getMessageType().getId()) {
+				if (checkAckMessage(packet, recvMessage)) {
 					return true;
 				}
 			}
@@ -151,6 +139,8 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
     	
     	return false;
 	}
+
+	protected abstract boolean checkAckMessage(O out, I in);
 
     /**
      * 비동기로 메시지 전송 (executor의 ThreadPool 이용) 
