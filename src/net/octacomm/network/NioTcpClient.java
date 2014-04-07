@@ -131,7 +131,7 @@ public class NioTcpClient {
 
 							@Override
 							public void channelActive(ChannelHandlerContext ctx) throws Exception {
-								ctx.channel().writeAndFlush("xxx").addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
+								ctx.channel().writeAndFlush("xxx").addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 							}
 
 							@Override

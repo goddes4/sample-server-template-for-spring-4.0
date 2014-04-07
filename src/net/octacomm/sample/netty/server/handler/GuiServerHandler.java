@@ -111,7 +111,7 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
 	}
 
 	private void sendResponseMessage(ResponseMessage res) {
-		channel.writeAndFlush(res).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
+		channel.writeAndFlush(res).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		logger.debug("{} Send Message : {}", channel.remoteAddress(), res);
 	}
 
@@ -147,18 +147,24 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
 	}
 
 	@Override
-	public boolean sendSyncMessage(RequestMessage packet) {
+	public boolean sendSyncMessage(RequestMessage packet, boolean ackReq) {
 		if (channel == null || !channel.isActive()) return false;
     	
 		logger.info("send : {}", packet);
 		
     	recvLock.clear();
-		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
+		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 
+		if (ackReq) {
+			return waitAckMessage();	
+		}
+		return true;
+	}
+
+	protected boolean waitAckMessage() {
 		BooleanResponseMessage response;
 		try {
-			response = (BooleanResponseMessage) recvLock.poll(
-					SYNC_MESSAGE_TIMEOUT_SEC, TimeUnit.MILLISECONDS);
+			response = (BooleanResponseMessage) recvLock.poll(SYNC_MESSAGE_TIMEOUT_SEC, TimeUnit.MILLISECONDS);
 
 			if (response != null) {
 				return response.isResult();
@@ -167,11 +173,11 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
 			logger.warn("{}", e.getMessage());
 		}
     	
-    	return false;		
+    	return false;
 	}
 
 	@Override
-	public ListenableFuture<Boolean> sendAsyncMessage(RequestMessage packet) {
+	public ListenableFuture<Boolean> sendAsyncMessage(RequestMessage packet, boolean ackReq) {
 		throw new UnsupportedOperationException();
 	}
 

@@ -83,6 +83,8 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 		}
 	}
 
+	protected abstract boolean isAckMessage(I packet);
+
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
 			throws Exception {
@@ -95,8 +97,6 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
 		}
 	}
 
-	protected abstract boolean isAckMessage(I packet);
-
     /**
      * 응답이 요구 되는 메시지의 경우 BlockingQueue를 사용하여, 
      * 응답메시지가 오기를 기다린후 응답시간 10000 msec 이 초과했을때 실패로 간주한다.
@@ -104,7 +104,7 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
      * - ACK가 오지 않을 경우 3회 재전송
      */
     @Override
-    public boolean sendSyncMessage(O packet) {
+    public boolean sendSyncMessage(O packet, boolean isWaitAck) {
     	if (channel == null || !channel.isActive()) return false;
     	
     	int retryCount = 0;
@@ -112,18 +112,25 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
     	// 3회 재전송
     	while(retryCount < RETRY_COUNT) {
     		logger.debug("retry count : {}, msg : {}", retryCount, packet);
-    		if (send(packet)) {
+    		if (send(packet, isWaitAck)) {
     			return true;
     		}
+    		
     		retryCount++;
     	}
     	return false;
     }
 
-	private boolean send(O packet) {
-		recvLock.clear();
-		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
+	private boolean send(O packet, boolean isWaitAck) {
+		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 
+		if (isWaitAck) {
+			return waitAckMessage(packet);
+		}
+		return true;
+	}
+
+	protected boolean waitAckMessage(O packet) {
 		I recvMessage;
 		try {
 			recvMessage = recvLock.poll(SYNC_MESSAGE_TIMEOUT_SEC, TimeUnit.MILLISECONDS);
@@ -148,12 +155,12 @@ public abstract class AbstractServerHandler<I extends IncomingMessage<?>, O exte
      * 
      */
 	@Override
-	public ListenableFuture<Boolean> sendAsyncMessage(final O packet) {
+	public ListenableFuture<Boolean> sendAsyncMessage(final O packet, final boolean isWaitAck) {
 		ListenableFutureTask<Boolean> futureTask = new ListenableFutureTask<>(new Callable<Boolean>() {
 
 			@Override
 			public Boolean call() throws Exception {
-		    	return sendSyncMessage(packet);
+		    	return sendSyncMessage(packet, isWaitAck);
 			}
 		});
 

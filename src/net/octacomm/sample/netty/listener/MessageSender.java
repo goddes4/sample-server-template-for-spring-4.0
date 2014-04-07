@@ -6,8 +6,8 @@ public interface MessageSender<T> {
 	
 	boolean isConnected();
 	
-	boolean sendSyncMessage(T packet);
+	boolean sendSyncMessage(T packet, boolean isWaitAck);
 	
-	ListenableFuture<Boolean> sendAsyncMessage(T packet);
+	ListenableFuture<Boolean> sendAsyncMessage(T packet, boolean isWaitAck);
 	
 }

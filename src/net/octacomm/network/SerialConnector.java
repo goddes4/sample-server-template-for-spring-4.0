@@ -116,13 +116,13 @@ public class SerialConnector implements MessageSender<OutgoingMessage<?>> {
 	}
 
 	@Override
-	public boolean sendSyncMessage(OutgoingMessage<?> packet) {
-		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);;
+	public boolean sendSyncMessage(OutgoingMessage<?> packet, boolean ackReq) {
+		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		return true;
 	}
 
 	@Override
-	public ListenableFuture<Boolean> sendAsyncMessage(OutgoingMessage<?> packet) {
+	public ListenableFuture<Boolean> sendAsyncMessage(OutgoingMessage<?> packet, boolean ackReq) {
 		throw new UnsupportedOperationException();
 	}
 

@@ -33,9 +33,9 @@ public class UsnMessageProcessor implements
 	@Scheduled(fixedDelay = 10000, initialDelay = 5000)
 	public void messageTest() {
 		logger.error("method start");
-		boolean result = usnMessageSender.sendSyncMessage(UsnMessageHelper.makeDummyOutgoing(33));
+		boolean result = usnMessageSender.sendSyncMessage(UsnMessageHelper.makeDummyOutgoing(33), true);
 		logger.error("sync result : {}", result);
-		usnMessageSender.sendAsyncMessage(UsnMessageHelper.makeDummyOutgoing(33)).addCallback(new ListenableFutureCallback<Boolean>() {
+		usnMessageSender.sendAsyncMessage(UsnMessageHelper.makeDummyOutgoing(33), true).addCallback(new ListenableFutureCallback<Boolean>() {
 
 			@Override
 			public void onSuccess(Boolean result) {
@@ -46,7 +46,7 @@ public class UsnMessageProcessor implements
 			public void onFailure(Throwable t) {
 				logger.error("Async {}", t);
 			}
-		});;
+		});
 		logger.error("method end");
 	}
 	
@@ -55,7 +55,7 @@ public class UsnMessageProcessor implements
 		switch (packet.getMessageType()) {
 
 			case DUMMY_INCOMMING:
-				usnMessageSender.sendAsyncMessage(UsnMessageHelper.makeDummyIncommingAck());
+				usnMessageSender.sendAsyncMessage(UsnMessageHelper.makeDummyIncommingAck(), false);
 					break;
 			
 			default:
@@ -70,7 +70,7 @@ public class UsnMessageProcessor implements
 	
 	private void sendNotifyRouterStatusMsg(boolean isConnected) {
 		if (guiMessageSensor != null) {
-			guiMessageSensor.sendSyncMessage(new NotifyMessageRequestMessage(Message.DUMMY_MSG));
+			guiMessageSensor.sendSyncMessage(new NotifyMessageRequestMessage(Message.DUMMY_MSG), true);
 		}
 	}
 	
