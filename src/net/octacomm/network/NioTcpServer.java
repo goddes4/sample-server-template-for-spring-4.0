@@ -30,10 +30,9 @@ public class NioTcpServer extends ChannelInboundHandlerAdapter {
     private String localIP;
     private int localPort = DEFAULT_SERVER_PORT;
     private ChannelInitializer<SocketChannel> channelInitializer;
-    private ChannelGroup channelGroup;
     
     private	ChannelFuture channelFuture;
-    private EventLoopGroup bossGroup = new NioEventLoopGroup();
+    private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
 
     @Override
@@ -52,10 +51,6 @@ public class NioTcpServer extends ChannelInboundHandlerAdapter {
 
     public void setChannelInitializer(ChannelInitializer<SocketChannel> channelInitializer) {
         this.channelInitializer = channelInitializer;
-    }
-
-    public void setChannelGroup(ChannelGroup channelGroup) {
-        this.channelGroup = channelGroup;
     }
 
     public void init() {
@@ -82,9 +77,6 @@ public class NioTcpServer extends ChannelInboundHandlerAdapter {
     
     public void close() {
     	if (channelFuture != null) {
-    		if (channelGroup != null) {
-    			channelGroup.removeAllChannels();
-    		}
     		try {
 				channelFuture.channel().close().sync();
 			} catch (InterruptedException e) {
