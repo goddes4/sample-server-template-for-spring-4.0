@@ -250,13 +250,13 @@
 			<version>${io.netty.version}</version>
 		</dependency>
 
-	    <dependency>
-	      <groupId>org.rxtx</groupId>
-	      <artifactId>rxtx</artifactId>
-	      <version>2.1.7</version>
-	    </dependency>
-	    
-		<!-- Reservist Miles Interface -->
+		<dependency>
+			<groupId>org.rxtx</groupId>
+			<artifactId>rxtx</artifactId>
+			<version>2.1.7</version>
+		</dependency>
+	
+		<!-- Sample Interface -->
 		<dependency>
 			<groupId>net.octacomm.sample</groupId>
 			<artifactId>sample-interface-template-for-spring-4.0</artifactId>
