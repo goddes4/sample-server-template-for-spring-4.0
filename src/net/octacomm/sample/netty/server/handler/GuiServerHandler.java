@@ -152,7 +152,6 @@ public class GuiServerHandler extends SimpleChannelInboundHandler<RequestMessage
     	
 		logger.info("send : {}", packet);
 		
-    	recvLock.clear();
 		channel.writeAndFlush(packet).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 
 		if (ackReq) {
